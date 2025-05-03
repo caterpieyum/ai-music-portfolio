@@ -25,7 +25,7 @@
     </div>
 
     <p id="description"></p>
-    <p id="status"></p>
+    <p id="status">Model loading...</p>
 
     <!-- 🎵 Visualizer Canvas -->
     <canvas id="visualizer" width="800" height="100"></canvas>
@@ -34,6 +34,7 @@
   </div>
 
   <script>
+    // Initialize the MusicRNN and AudioContext
     const rnn = new mm.MusicRNN(
       'https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/melody_rnn'
     );
@@ -65,7 +66,7 @@
       }
     }
 
-    drawVisualizer();
+    drawVisualizer();  // Start the visualizer loop
 
     const moodSeeds = {
       happy: [{ pitch: 60, startTime: 0, endTime: 0.5 }, { pitch: 64, startTime: 0.5, endTime: 1 }, { pitch: 67, startTime: 1, endTime: 1.5 }],
@@ -93,7 +94,9 @@
       document.getElementById('status').innerText = 'Model loaded! Select a mood.';
     });
 
+    // Function to generate music based on mood
     async function generateMood(mood) {
+      console.log(`Generating ${mood} melody...`);  // Debugging output
       document.getElementById('description').innerText = descriptions[mood];
       document.getElementById('status').innerText = `Generating a ${mood} melody...`;
 
@@ -105,6 +108,8 @@
       const quantized = mm.sequences.quantizeNoteSequence(seed, 4);
       const sequence = await rnn.continueSequence(quantized, 20, 1.1);
       const audio = await mm.player.loadSamples(sequence);
+
+      console.log("Audio loaded:", audio);  // Debugging output
 
       const audioBuffer = audio[0].buffer;
 
@@ -120,10 +125,9 @@
       audioElement.src = URL.createObjectURL(new Blob([audioBuffer], { type: 'audio/wav' }));
       audioElement.play();
 
-      // Update status
+      console.log("Audio started playing");  // Debugging output
       document.getElementById('status').innerText = `Here's your ${mood} melody.`;
     }
   </script>
 </body>
 </html>
-
