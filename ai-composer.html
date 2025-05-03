@@ -104,11 +104,12 @@
 
       const quantized = mm.sequences.quantizeNoteSequence(seed, 4);
       const sequence = await rnn.continueSequence(quantized, 20, 1.1);
-      const audioBuffer = await mm.soundfont.player.loadSamples(sequence);
-      const audioNode = mm.soundfont.player.toAudioBuffer(sequence, audioContext);
+      const audio = await mm.player.loadSamples(sequence);
+
+      const audioBuffer = audio[0].buffer;
 
       const source = audioContext.createBufferSource();
-      source.buffer = audioNode;
+      source.buffer = audioBuffer;
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       source.start();
@@ -118,4 +119,3 @@
   </script>
 </body>
 </html>
-
