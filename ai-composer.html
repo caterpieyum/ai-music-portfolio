@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Composer</title>
   <link rel="stylesheet" href="style.css" />
+  
+  <!-- Magenta Music Library -->
   <script src="https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/core.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/music_rnn.js"></script>
+
 </head>
 <body>
   <div class="container">
@@ -34,100 +37,108 @@
   </div>
 
   <script>
-    // Initialize the MusicRNN and AudioContext
-    const rnn = new mm.MusicRNN(
-      'https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/melody_rnn'
-    );
-    const player = new mm.Player();
+    // Make sure Magenta has loaded before using it
+    if (typeof mm === "undefined") {
+      alert("Magenta Music library is not loaded. Please try again.");
+    } else {
+      // Initialize the MusicRNN and AudioContext
+      const rnn = new mm.MusicRNN(
+        'https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/melody_rnn'
+      );
+      const player = new mm.Player();
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 64;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 64;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
 
-    const canvas = document.getElementById("visualizer");
-    const canvasCtx = canvas.getContext("2d");
+      const canvas = document.getElementById("visualizer");
+      const canvasCtx = canvas.getContext("2d");
 
-    function drawVisualizer() {
-      requestAnimationFrame(drawVisualizer);
-      analyser.getByteFrequencyData(dataArray);
+      function drawVisualizer() {
+        requestAnimationFrame(drawVisualizer);
+        analyser.getByteFrequencyData(dataArray);
 
-      canvasCtx.fillStyle = "#000";
-      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+        canvasCtx.fillStyle = "#000";
+        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = (canvas.width / bufferLength) * 1.5;
-      let x = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const barHeight = dataArray[i] / 2;
-        canvasCtx.fillStyle = "#b084f7";
-        canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-        x += barWidth + 1;
+        const barWidth = (canvas.width / bufferLength) * 1.5;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = dataArray[i] / 2;
+          canvasCtx.fillStyle = "#b084f7";
+          canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+          x += barWidth + 1;
+        }
       }
-    }
 
-    drawVisualizer();  // Start the visualizer loop
+      drawVisualizer();  // Start the visualizer loop
 
-    // Define mood seed and description before the function
-    const moodSeeds = {
-      happy: [{ pitch: 60, startTime: 0, endTime: 0.5 }, { pitch: 64, startTime: 0.5, endTime: 1 }, { pitch: 67, startTime: 1, endTime: 1.5 }],
-      sad: [{ pitch: 60, startTime: 0, endTime: 0.75 }, { pitch: 57, startTime: 0.75, endTime: 1.5 }, { pitch: 55, startTime: 1.5, endTime: 2.25 }],
-      energetic: [{ pitch: 60, startTime: 0, endTime: 0.25 }, { pitch: 64, startTime: 0.25, endTime: 0.5 }, { pitch: 67, startTime: 0.5, endTime: 0.75 }, { pitch: 72, startTime: 0.75, endTime: 1 }],
-      calm: [{ pitch: 60, startTime: 0, endTime: 1 }, { pitch: 62, startTime: 1, endTime: 2 }],
-      playful: [{ pitch: 72, startTime: 0, endTime: 0.25 }, { pitch: 76, startTime: 0.25, endTime: 0.5 }, { pitch: 74, startTime: 0.5, endTime: 0.75 }],
-      melancholic: [{ pitch: 60, startTime: 0, endTime: 0.5 }, { pitch: 58, startTime: 0.5, endTime: 1 }, { pitch: 55, startTime: 1, endTime: 1.5 }],
-      aggressive: [{ pitch: 67, startTime: 0, endTime: 0.25 }, { pitch: 67, startTime: 0.25, endTime: 0.5 }, { pitch: 65, startTime: 0.5, endTime: 0.75 }, { pitch: 62, startTime: 0.75, endTime: 1 }],
-      hopeful: [{ pitch: 60, startTime: 0, endTime: 0.5 }, { pitch: 64, startTime: 0.5, endTime: 1 }, { pitch: 67, startTime: 1, endTime: 1.5 }, { pitch: 69, startTime: 1.5, endTime: 2 }]
-    };
-
-    const descriptions = {
-      happy: "Bright, joyful, and major-key. The AI composes something cheerful and upbeat.",
-      sad: "Minor tones and slower rhythm for an emotional, introspective mood.",
-      energetic: "Fast, punchy notes with lively rhythm. A high-energy melody.",
-      calm: "Slow and spacious tones with long notes to help relax.",
-      playful: "Bouncy and light-hearted with quirky, quick patterns.",
-      melancholic: "Soft and emotional. Reflective, with a slightly sorrowful tone.",
-      aggressive: "Bold and dramatic with repetitive forceful patterns.",
-      hopeful: "Ascending, uplifting tones that feel optimistic and rising."
-    };
-
-    rnn.initialize().then(() => {
-      document.getElementById('status').innerText = 'Model loaded! Select a mood.';
-    });
-
-    // Function to generate music based on mood
-    async function generateMood(mood) {
-      console.log(`Generating ${mood} melody...`);  // Debugging output
-      document.getElementById('description').innerText = descriptions[mood];
-      document.getElementById('status').innerText = `Generating a ${mood} melody...`;
-
-      const seed = {
-        notes: moodSeeds[mood],
-        totalTime: 2
+      // Define mood seed and description before the function
+      const moodSeeds = {
+        happy: [{ pitch: 60, startTime: 0, endTime: 0.5 }, { pitch: 64, startTime: 0.5, endTime: 1 }, { pitch: 67, startTime: 1, endTime: 1.5 }],
+        sad: [{ pitch: 60, startTime: 0, endTime: 0.75 }, { pitch: 57, startTime: 0.75, endTime: 1.5 }, { pitch: 55, startTime: 1.5, endTime: 2.25 }],
+        energetic: [{ pitch: 60, startTime: 0, endTime: 0.25 }, { pitch: 64, startTime: 0.25, endTime: 0.5 }, { pitch: 67, startTime: 0.5, endTime: 0.75 }, { pitch: 72, startTime: 0.75, endTime: 1 }],
+        calm: [{ pitch: 60, startTime: 0, endTime: 1 }, { pitch: 62, startTime: 1, endTime: 2 }],
+        playful: [{ pitch: 72, startTime: 0, endTime: 0.25 }, { pitch: 76, startTime: 0.25, endTime: 0.5 }, { pitch: 74, startTime: 0.5, endTime: 0.75 }],
+        melancholic: [{ pitch: 60, startTime: 0, endTime: 0.5 }, { pitch: 58, startTime: 0.5, endTime: 1 }, { pitch: 55, startTime: 1, endTime: 1.5 }],
+        aggressive: [{ pitch: 67, startTime: 0, endTime: 0.25 }, { pitch: 67, startTime: 0.25, endTime: 0.5 }, { pitch: 65, startTime: 0.5, endTime: 0.75 }, { pitch: 62, startTime: 0.75, endTime: 1 }],
+        hopeful: [{ pitch: 60, startTime: 0, endTime: 0.5 }, { pitch: 64, startTime: 0.5, endTime: 1 }, { pitch: 67, startTime: 1, endTime: 1.5 }, { pitch: 69, startTime: 1.5, endTime: 2 }]
       };
 
-      const quantized = mm.sequences.quantizeNoteSequence(seed, 4);
-      const sequence = await rnn.continueSequence(quantized, 20, 1.1);
-      const audio = await mm.player.loadSamples(sequence);
+      const descriptions = {
+        happy: "Bright, joyful, and major-key. The AI composes something cheerful and upbeat.",
+        sad: "Minor tones and slower rhythm for an emotional, introspective mood.",
+        energetic: "Fast, punchy notes with lively rhythm. A high-energy melody.",
+        calm: "Slow and spacious tones with long notes to help relax.",
+        playful: "Bouncy and light-hearted with quirky, quick patterns.",
+        melancholic: "Soft and emotional. Reflective, with a slightly sorrowful tone.",
+        aggressive: "Bold and dramatic with repetitive forceful patterns.",
+        hopeful: "Ascending, uplifting tones that feel optimistic and rising."
+      };
 
-      console.log("Audio loaded:", audio);  // Debugging output
+      rnn.initialize().then(() => {
+        document.getElementById('status').innerText = 'Model loaded! Select a mood.';
+      }).catch(error => {
+        console.error('Error loading model:', error);
+        document.getElementById('status').innerText = 'Failed to load model. Please try again later.';
+      });
 
-      const audioBuffer = audio[0].buffer;
+      // Function to generate music based on mood
+      async function generateMood(mood) {
+        console.log(`Generating ${mood} melody...`);  // Debugging output
+        document.getElementById('description').innerText = descriptions[mood];
+        document.getElementById('status').innerText = `Generating a ${mood} melody...`;
 
-      // Create an audio source
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-      source.start();
+        const seed = {
+          notes: moodSeeds[mood],
+          totalTime: 2
+        };
 
-      // Set the audio element for the player
-      const audioElement = new Audio();
-      audioElement.src = URL.createObjectURL(new Blob([audioBuffer], { type: 'audio/wav' }));
-      audioElement.play();
+        const quantized = mm.sequences.quantizeNoteSequence(seed, 4);
+        const sequence = await rnn.continueSequence(quantized, 20, 1.1);
+        const audio = await mm.player.loadSamples(sequence);
 
-      console.log("Audio started playing");  // Debugging output
-      document.getElementById('status').innerText = `Here's your ${mood} melody.`;
+        console.log("Audio loaded:", audio);  // Debugging output
+
+        const audioBuffer = audio[0].buffer;
+
+        // Create an audio source
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        source.start();
+
+        // Set the audio element for the player
+        const audioElement = new Audio();
+        audioElement.src = URL.createObjectURL(new Blob([audioBuffer], { type: 'audio/wav' }));
+        audioElement.play();
+
+        console.log("Audio started playing");  // Debugging output
+        document.getElementById('status').innerText = `Here's your ${mood} melody.`;
+      }
     }
   </script>
 </body>
