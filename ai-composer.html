@@ -108,14 +108,22 @@
 
       const audioBuffer = audio[0].buffer;
 
+      // Create an audio source
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       source.start();
 
+      // Set the audio element for the player
+      const audioElement = new Audio();
+      audioElement.src = URL.createObjectURL(new Blob([audioBuffer], { type: 'audio/wav' }));
+      audioElement.play();
+
+      // Update status
       document.getElementById('status').innerText = `Here's your ${mood} melody.`;
     }
   </script>
 </body>
 </html>
+
